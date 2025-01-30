@@ -113,7 +113,12 @@ namespace LeapWoF
                     Spin();
                     break;
                 case "2":
-                    Solve();
+                    Solve(); //Player can only try to solve once, if incorrect, continue guessing letters
+                    Console.ReadKey();
+                    break;
+                default:
+                    outputProvider.WriteLine("Invalid option. Please choose 1 to spin or 2 to solve.");
+                    GameState = GameState.WaitingForUserInput;
                     break;
             }
 
@@ -143,6 +148,18 @@ namespace LeapWoF
         {
             outputProvider.Write("Please enter your solution:");
             var guess = inputProvider.Read();
+
+            //Check if the guess is correct
+            if (string.Equals(guess, TemporaryPuzzle, StringComparison.OrdinalIgnoreCase)) 
+            {
+                outputProvider.WriteLine("You are correct! You have solved the puzzle!");
+                GameState = GameState.RoundOver; //End the round if the puzzle is solved correctly
+            }
+            else
+            {
+                outputProvider.WriteLine("Incorrect solution. Press any key to continue.");
+                GameState = GameState.GuessingLetter; // Go back to guessing Letters after a wrong solution
+            }
         }
         public void GuessLetter()
         {
