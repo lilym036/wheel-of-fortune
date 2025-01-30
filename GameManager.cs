@@ -166,8 +166,27 @@ namespace LeapWoF
             GameState = GameState.GuessingLetter;
             outputProvider.Write("Please guess a letter: ");
             var guess = inputProvider.Read();
-            charGuessList.Add(guess[0]); //guess is in string format, this effectively converts to char; TODO, add input validation to reject non-single letter input
+
+            if (string.IsNullOrEmpty(guess) || guess.Length != 1 || !char.IsLetter(guess[0]))
+            {
+                outputProvider.WriteLine("Invalid input. Please guess a single letter.");
+                //return;
+            }
+
+            char guessedLetter= guess[0];
+            charGuessList.Add(guessedLetter);
+            //charGuessList.Add(guess[0]); //guess is in string format, this effectively converts to char; TODO, add input validation to reject non-single letter input
             outputProvider.WriteLine("Letters Guessed: " + String.Join(" ", charGuessList));
+
+            if (TemporaryPuzzle.Contains(guess))
+            {
+                outputProvider.WriteLine($"Good guess! The letter {guess} is in the word.");
+            }
+            else 
+            {
+                outputProvider.WriteLine($"Sorry, the letter {guess} is not in the word.");
+            }
+
             HiddenPuzzleDisplay = HidePuzzleSolution(TemporaryPuzzle);
             
         }
