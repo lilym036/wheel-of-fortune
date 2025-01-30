@@ -169,13 +169,11 @@ namespace LeapWoF
 
             if (string.IsNullOrEmpty(guess) || guess.Length != 1 || !char.IsLetter(guess[0]))
             {
-                outputProvider.WriteLine("Invalid input. Please guess a single letter.");
-                //return;
+                outputProvider.WriteLine("Invalid input. Please guess a single letter.");          
             }
 
             char guessedLetter= guess[0];
             charGuessList.Add(guessedLetter);
-            //charGuessList.Add(guess[0]); //guess is in string format, this effectively converts to char; TODO, add input validation to reject non-single letter input
             outputProvider.WriteLine("Letters Guessed: " + String.Join(" ", charGuessList));
 
             if (TemporaryPuzzle.Contains(guess))
