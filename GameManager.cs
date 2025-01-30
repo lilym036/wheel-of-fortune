@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
+using System.Threading;
 using LeapWoF.Interfaces;
 
 namespace LeapWoF
@@ -22,7 +24,9 @@ namespace LeapWoF
         private IOutputProvider outputProvider;
 
         private string TemporaryPuzzle;
-        public List<string> charGuessList = new List<string>();
+        private string HiddenPuzzleDisplay;
+
+        public HashSet<char> charGuessList = new HashSet<char>();
 
         public GameState GameState { get; private set; }
 
@@ -69,9 +73,26 @@ namespace LeapWoF
                 }
             }
         }
+
+        public string HidePuzzleSolution(string solution)
+        {
+            StringBuilder puzzle = new StringBuilder();
+            for (int i =0; i < solution.Length; i++)
+            {
+                var toAppend = charGuessList.Contains(solution[i]) ? solution[i] : '_';
+                puzzle.Append(toAppend);
+                if (i != solution.Length - 1)
+                {
+                    puzzle.Append(' ');
+                }
+            }
+            
+            return puzzle.ToString();
+        }
         public void StartNewRound()
         {
-            TemporaryPuzzle = "Hello world";
+            TemporaryPuzzle = "pineapples";
+            HiddenPuzzleDisplay = HidePuzzleSolution(TemporaryPuzzle);
 
             // update the game state
             GameState = GameState.RoundStarted;
@@ -79,7 +100,7 @@ namespace LeapWoF
 
         public void PerformSingleTurn()
         {
-            outputProvider.Clear();
+            //outputProvider.Clear();
             DrawPuzzle();
             outputProvider.WriteLine("Type 1 to spin, 2 to solve");
             GameState = GameState.WaitingForUserInput;
@@ -104,7 +125,7 @@ namespace LeapWoF
         private void DrawPuzzle()
         {
             outputProvider.WriteLine("The puzzle is:");
-            outputProvider.WriteLine(TemporaryPuzzle);
+            outputProvider.WriteLine(HiddenPuzzleDisplay);
             outputProvider.WriteLine();
         }
 
@@ -125,9 +146,13 @@ namespace LeapWoF
         }
         public void GuessLetter()
         {
+            GameState = GameState.GuessingLetter;
             outputProvider.Write("Please guess a letter: ");
             var guess = inputProvider.Read();
-            charGuessList.Add(guess);
+            charGuessList.Add(guess[0]); //guess is in string format, this effectively converts to char; TODO, add input validation to reject non-single letter input
+            outputProvider.WriteLine("Letters Guessed: " + String.Join(" ", charGuessList));
+            HiddenPuzzleDisplay = HidePuzzleSolution(TemporaryPuzzle);
+            
         }
 
         /// <summary>
