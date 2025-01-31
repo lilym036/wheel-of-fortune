@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Threading;
 using LeapWoF.Interfaces;
+using static System.Collections.Specialized.BitVector32;
 
 namespace LeapWoF
 {
@@ -25,9 +28,11 @@ namespace LeapWoF
 
         private string TemporaryPuzzle;
         private string HiddenPuzzleDisplay;
+        private Player currentPlayer;
         private Scoreboard Scoreboard = new Scoreboard();
+        private SpinWheel SpinWheel = new SpinWheel();
 
-        public HashSet<char> charGuessList = new HashSet<char>();
+        public HashSet<char> charGuessSet = new HashSet<char>();
         private List<Player> players = new List<Player>();
 
         public GameState GameState { get; private set; }
@@ -60,10 +65,11 @@ namespace LeapWoF
             while (true)
             {
 
-                PerformSingleTurn();
+                PerformTurns();
 
                 if (GameState == GameState.RoundOver)
                 {
+                    charGuessSet.Clear();
                     StartNewRound();
                     continue;
                 }
@@ -81,7 +87,7 @@ namespace LeapWoF
             StringBuilder puzzle = new StringBuilder();
             for (int i =0; i < solution.Length; i++)
             {
-                var toAppend = charGuessList.Contains(solution[i]) ? solution[i] : '_';
+                var toAppend = charGuessSet.Contains(solution[i]) ? solution[i] : '_';
                 puzzle.Append(toAppend);
                 if (i != solution.Length - 1)
                 {
@@ -93,11 +99,22 @@ namespace LeapWoF
         }
         public void StartNewRound()
         {
+            charGuessSet.Clear();
             TemporaryPuzzle = "pineapples";
             HiddenPuzzleDisplay = HidePuzzleSolution(TemporaryPuzzle);
 
             // update the game state
             GameState = GameState.RoundStarted;
+        }
+
+        public void PerformTurns()
+        {
+            foreach (var player in players)
+            {
+                outputProvider.WriteLine($"Player {player.playerName}'s turn.");
+                currentPlayer = player;
+                PerformSingleTurn();
+            }
         }
 
         public void PerformSingleTurn()
@@ -115,6 +132,7 @@ namespace LeapWoF
                     Spin();
                     break;
                 case "2":
+                    // Solve defaults to 800 pts.
                     Solve(); //Player can only try to solve once, if incorrect, continue guessing letters
                     Console.ReadKey();
                     break;
@@ -142,20 +160,38 @@ namespace LeapWoF
         public void Spin()
         {
             outputProvider.WriteLine("Spinning the wheel...");
-            //TODO - Implement wheel + possible wheel spin outcomes
-            GuessLetter();
+            var points = SpinWheel.Spin();
+
+            switch (points)
+            {
+                case "Bankrupt":
+                    Scoreboard.BankruptPlayer(currentPlayer.playerName);
+                    break;
+                case "Lose a Turn":
+                    outputProvider.WriteLine($"Sorry, {currentPlayer.playerName}, you lose a turn.");
+                    break;
+                default:
+                    GuessLetter((int)points);
+                    break;
+            }
+            
         }
 
         public void Solve()
         {
             outputProvider.Write("Please enter your solution:");
             var guess = inputProvider.Read();
+            // Solve defaults to 800 points
+            int points = 800;
 
             //Check if the guess is correct
             if (string.Equals(guess, TemporaryPuzzle, StringComparison.OrdinalIgnoreCase)) 
             {
-                outputProvider.WriteLine("You are correct! You have solved the puzzle!");
+                charGuessSet.Clear();
+                outputProvider.WriteLine($"You are correct! You have solved the puzzle and earned ${points}!");
+                Scoreboard.UpdateScore(currentPlayer.playerName, points);
                 GameState = GameState.RoundOver; //End the round if the puzzle is solved correctly
+                
             }
             else
             {
@@ -163,32 +199,53 @@ namespace LeapWoF
                 GameState = GameState.GuessingLetter; // Go back to guessing Letters after a wrong solution
             }
         }
-        public void GuessLetter()
+        public void GuessLetter(int points)
         {
             GameState = GameState.GuessingLetter;
             outputProvider.Write("Please guess a letter: ");
             var guess = inputProvider.Read();
+            bool invalidInput = true;
 
-            if (string.IsNullOrEmpty(guess) || guess.Length != 1 || !char.IsLetter(guess[0]))
+            while (invalidInput)
             {
-                outputProvider.WriteLine("Invalid input. Please guess a single letter.");          
+                if (string.IsNullOrEmpty(guess) || guess.Length != 1 || !char.IsLetter(guess[0]))
+                {
+                    outputProvider.WriteLine("Invalid input. Please guess a single letter.");
+                    GameState = GameState.GuessingLetter;
+                    guess = inputProvider.Read();
+                }
+                else
+                {
+                    invalidInput = false;
+                }
             }
 
-            char guessedLetter= guess[0];
-            charGuessList.Add(guessedLetter);
-            outputProvider.WriteLine("Letters Guessed: " + String.Join(" ", charGuessList));
 
-            if (TemporaryPuzzle.Contains(guess))
-            {
-                outputProvider.WriteLine($"Good guess! The letter {guess} is in the word.");
-            }
-            else 
-            {
-                outputProvider.WriteLine($"Sorry, the letter {guess} is not in the word.");
-            }
+            CheckGuessedLetter(guess, points);
 
             HiddenPuzzleDisplay = HidePuzzleSolution(TemporaryPuzzle);
             
+        }
+
+        private void CheckGuessedLetter(string guess, int points)
+        {
+            char guessedLetter = guess[0];
+
+            if (TemporaryPuzzle.Contains(guess) && !charGuessSet.Contains(guessedLetter))
+            {
+                Scoreboard.UpdateScore(currentPlayer.playerName, points);
+                outputProvider.WriteLine($"Good guess! The letter {guess} is in the word. You have earned ${points}!");
+            }
+            else if (TemporaryPuzzle.Contains(guess) && charGuessSet.Contains(guessedLetter))
+            {
+                outputProvider.WriteLine($"Sorry, the letter {guess} was already correctly guessed.");
+            }
+            else
+            {
+                outputProvider.WriteLine($"Sorry, the letter {guess} is not in the word.");
+            }
+            charGuessSet.Add(guessedLetter);
+            outputProvider.WriteLine("Letters Guessed: " + String.Join(" ", charGuessSet));
         }
 
         /// <summary>
@@ -198,15 +255,60 @@ namespace LeapWoF
         {
 
             outputProvider.WriteLine("Welcome to Wheel of Fortune!");
-            //GameSetup();
+            GameSetup();
             
             StartNewRound();
         }
 
-        //public void GameSetup
+        private void PopulateScoreboard()
+        {
+            foreach (var player in players)
+            {
+                Scoreboard.AddPlayer(player.playerName);
+            }
+
+        }
+
+        public void GameSetup()
+        {
+            AddPlayer();
+            bool addingPlayers = true;
+
+            while (addingPlayers)
+            {
+                outputProvider.WriteLine("Add another player? (y/n): ");
+                GameState = GameState.WaitingForUserInput;
+
+                var action = inputProvider.Read();
+
+                switch (action)
+                {
+                    case "y":
+                        AddPlayer();
+                        break;
+                    case "n":
+                        addingPlayers = false;
+                        break;
+                    default:
+                        outputProvider.WriteLine("Invalid option. Please choose 'y' to add another player or 'n' to proceed.");
+                        GameState = GameState.WaitingForUserInput;
+                        continue;
+                }
+            }
+
+            PopulateScoreboard();
+            Scoreboard.DisplayScores(); // Scores not displaying
+            
+        }
+
 
         public void AddPlayer()
         {
+            outputProvider.WriteLine("Please enter a new player name: ");
+            GameState = GameState.WaitingForUserInput;
+            var playerName = inputProvider.Read();
+
+            players.Add(new Player(playerName));
             
         }
     }

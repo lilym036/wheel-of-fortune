@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using LeapWoF.Interfaces;
 
 namespace LeapWoF
 {
@@ -10,10 +11,18 @@ namespace LeapWoF
     internal class Scoreboard
     {
         private Dictionary<string, int> scores;
-
-        public Scoreboard()
+        private IOutputProvider outputProvider;
+        public Scoreboard() : this(new ConsoleOutputProvider())
         {
             scores = new Dictionary<string, int>();
+        }
+
+        public Scoreboard(IOutputProvider outputProvider)
+        {
+            if (outputProvider == null)
+                throw new ArgumentNullException(nameof(outputProvider));
+
+            this.outputProvider = outputProvider;
         }
 
         public void AddPlayer(string playerName)
@@ -50,8 +59,18 @@ namespace LeapWoF
         {
             foreach (var player in scores)
             {
-                Console.WriteLine($"{player.Key}: {player.Value}");
+                outputProvider.WriteLine($"{player.Key}: {player.Value}");
             }
+        }
+
+        public void BankruptPlayer(string playerName)
+        {
+            if (scores.ContainsKey(playerName))
+            {
+                scores[playerName] = 0;
+                outputProvider.WriteLine($"{playerName} has been bankrupt. Round Score: {scores[playerName]}");
+            }
+            
         }
     }
 }
