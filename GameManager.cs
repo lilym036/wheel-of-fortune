@@ -25,8 +25,10 @@ namespace LeapWoF
 
         private string TemporaryPuzzle;
         private string HiddenPuzzleDisplay;
+        private Scoreboard Scoreboard = new Scoreboard();
 
         public HashSet<char> charGuessList = new HashSet<char>();
+        private List<Player> players = new List<Player>();
 
         public GameState GameState { get; private set; }
 
@@ -196,7 +198,17 @@ namespace LeapWoF
         {
 
             outputProvider.WriteLine("Welcome to Wheel of Fortune!");
+            //GameSetup();
+            
             StartNewRound();
+        }
+
+        //public void GameSetup
+
+        public void AddPlayer()
+        {
+            
         }
     }
 }
+
