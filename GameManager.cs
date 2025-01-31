@@ -15,6 +15,13 @@ namespace LeapWoF
     /// </summary>
     public class GameManager
     {
+        private List<string> puzzleWords = new List<string>
+        {
+            "pineapples", "blueberries", "mangoes", "avocados", "coconut"
+        };
+
+        //To select random puzzle words
+        private Random random = new Random();
 
         /// <summary>
         /// The input provider
@@ -100,7 +107,8 @@ namespace LeapWoF
         public void StartNewRound()
         {
             charGuessSet.Clear();
-            TemporaryPuzzle = "pineapples";
+
+            TemporaryPuzzle = puzzleWords[random.Next(puzzleWords.Count)];
             HiddenPuzzleDisplay = HidePuzzleSolution(TemporaryPuzzle);
 
             // update the game state
@@ -171,6 +179,7 @@ namespace LeapWoF
                     outputProvider.WriteLine($"Sorry, {currentPlayer.playerName}, you lose a turn.");
                     break;
                 default:
+                    outputProvider.WriteLine($"This spin is worth ${points}.");
                     GuessLetter((int)points);
                     break;
             }
@@ -191,7 +200,9 @@ namespace LeapWoF
                 outputProvider.WriteLine($"You are correct! You have solved the puzzle and earned ${points}!");
                 Scoreboard.UpdateScore(currentPlayer.playerName, points);
                 GameState = GameState.RoundOver; //End the round if the puzzle is solved correctly
-                
+                //TODO - Display end of round and all player totals
+                Scoreboard.DisplayScores();
+
             }
             else
             {
